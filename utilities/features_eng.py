@@ -3,38 +3,8 @@ from scipy import stats
 import numpy as np
 from collections import Counter
 import pandas as pd
-
-def return_windowed_df(df, columns, label, skip1 = False, overlap = False):
-    grouped = df.groupby("section_id", group_keys=True)[columns]
-    stride = 512
-    all = pd.DataFrame(columns=columns)
-    if columns[:-1] == 'mizan':
-        
-        skip1 = True
-    for section_id, group in grouped:
-        
-        l = 0
-        r = 512
-        
-        temp = pd.DataFrame(columns=columns)
-        
-        if skip1 and [x[10] for x in group.values[l:r]][0] == 1:
-            for i, c in enumerate(columns):
-                temp[c] = [x[i] for x in group.values[:]]
-            temp['section_id'] = [section_id + str(l)] * len(temp) 
-            all = pd.concat([temp, all])
-            continue
-        
-        while(len(group.values[l:r]) >= 512):
-            for i, c in enumerate(columns):
-                temp[c] = [x[i] for x in group.values[l:r]]
-              
-            temp['section_id'] = [section_id + str(l)] * stride  
-            all = pd.concat([temp, all])
-            l += stride
-            r += stride
-            
-    return all
+from utilities.constants import *
+import matplotlib.pyplot as plt 
 
 def extract_feature(sequence, pitch_distr, ql_distr=None):
     """
@@ -121,3 +91,95 @@ def note_to_midi(note, include_octave=False):
         octave = 4  # Extract the octave (e.g., '0', '2', etc.)
     if 'Rest' in note_name: return -1
     return NOTE_TO_MIDI[note_name] + 12 * (octave + 1)
+
+def return_windowed_df(df, columns, label, skip1 = False, apply_stride = False, length_sequence = 1024):
+    """
+    Parameters:
+        df: Dataframe to section
+        label: ....
+        skip1: .... 
+        apply_stride: If True, consecutive sections will have an overlapping stride
+        of half the sequence length
+        length_sequence: Note Length of each sequence
+    
+    -------------------------------------------------------------------
+
+    Returns the Dataframe with splitted section based on the length_sequence parameter:
+    A section id with x notes will be split in x/length_sequence sections
+    """
+    grouped = df.groupby("section_id", group_keys=True)[columns]
+    stride = length_sequence / 2 if apply_stride else length_sequence
+    stride = int(stride)
+    all = pd.DataFrame(columns=columns)
+    if columns[:-1] == 'mizan':
+        
+        skip1 = True
+    for section_id, group in grouped:
+        
+        l = 0
+        r = length_sequence
+        temp = pd.DataFrame(columns=columns)
+        
+        if skip1 and [x[10] for x in group.values[l:r]][0] == 1:
+            for i, c in enumerate(columns):
+                temp[c] = [x[i] for x in group.values[:]]
+            temp['section_id'] = [section_id + str(l)] * len(temp) 
+            all = pd.concat([temp, all])
+            continue
+        
+        while(len(group.values[l:r]) >= length_sequence):
+            for i, c in enumerate(columns):
+                temp[c] = [x[i] for x in group.values[l:r]]
+            
+            temp['section_id'] = [section_id + str(l)] * stride *2 if apply_stride else [section_id + str(l)] * stride
+            all = pd.concat([temp, all])
+            l += stride
+            r += stride  
+    return all
+
+def compare_plot_label_distribution(df1, df2, plot = True):
+    """
+    Parameters:
+        df1: First Dataframe to compare
+        df2: Second Dataframe to compare
+        plot: If True, both distributions are plotted in a bar chart
+    
+    -------------------------------------------------------------------
+
+    Returns the distributions of the labels ['nawba', 'tab', 'mizan'] in the different dataframes of the same structure.
+    If the Plot flag is true, it also displays in a bar chart the distributions
+    """
+    def return_label_distributions(df):
+        distributions = {
+            'nawba' : [],
+            'tab' : [],
+            'mizan' : []
+        }
+        for l2 in ['nawba', 'tab', 'mizan']:
+            
+            for l in LABEL_LIST_TRAIN[l2]:
+                
+                distributions[l2].append(len(df[df[l2] == l]['section_id'].unique()))
+        return distributions
+    if plot:
+        fig = plt.figure(figsize=(20, 4))
+        for i, l2 in enumerate(['nawba', 'tab', 'mizan']):
+            plt.subplot(1, 3, i+1)
+            plt.bar(LABEL_LIST_TRAIN[l2], (return_label_distributions(df1)[l2]), alpha = 0.8, label = 'New Sections')
+            plt.bar(LABEL_LIST_TRAIN[l2], (return_label_distributions(df2)[l2]), alpha = 0.8, label = 'Original')
+        plt.tight_layout()
+        plt.legend()
+    return return_label_distributions(df1), return_label_distributions(df2)
+
+def replace_label(x, label):
+    """
+    Parameters:
+        x: Dataframe fo which we substitute the labels
+        label: Specific label for which we substitute the values. Can be either one of ['nawba', 'tab', 'mizan']
+    
+    -------------------------------------------------------------------
+
+    Replaces in the label column of the dataframe x the values so that each classo is represented in an ordinal value from (0, n).
+    For example: the labels [1, 2, 6, 8] will be substitued to [0, 1, 2, 3]
+    """
+    return REPLACE_STRING[label][str(int(x))]
