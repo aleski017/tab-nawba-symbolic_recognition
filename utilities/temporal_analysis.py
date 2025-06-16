@@ -12,6 +12,7 @@ from music21 import *
 from utilities.corpus_search import *
 
 
+
 def get_timestamps_from_all_corpus():
     """
     Parses the musicXML of every track in the dataset into a dataframe of notes, each labeled with all possible target labels, their corresponding section id and
@@ -66,7 +67,7 @@ def get_timestamps_from_all_corpus():
                     note_time = round(measure_start_time + (note_offset * seconds_per_beat), 2)
                     
                     if isinstance(element, note.Rest):
-                        print(element.isChord)
+                       
                         timestamps.append((f"Rest", note_time, element.measureNumber, element.duration.quarterLength, bpm, element.beatStrength, element.offset, element.tie, element.isChord))
                     elif isinstance(element, note.Note):
                         timestamps.append((element.nameWithOctave, note_time, element.measureNumber, element.duration.quarterLength, bpm, element.beatStrength, element.offset, element.tie, element.isChord))
@@ -83,6 +84,8 @@ def get_timestamps_from_all_corpus():
         section_id = []
         for note_name, note_time, measure, ql, bpm, beatStrength, offset, tie, isChord in timestamps:
             
+
+
             if index > len(df_track) - 1:
                     mizan_label.append(None)
                     form_label.append(None)
@@ -216,6 +219,7 @@ def get_folded_rhythm_histogram(ql):
 
     # Bin the quarter lengths
     for duration in ql:
+        
         if duration <= 0.125:
             hist["1/8"] += 1
         elif duration <= 0.25:

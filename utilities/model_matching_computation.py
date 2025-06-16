@@ -60,6 +60,7 @@ def get_folded_score_histogram(tracks):
     hist = dict((note, 0) for note in LIST_NOTES)
     hist_y = None
     for track_id in tracks:
+        
         path = DF_PATH_TRACKS + track_id + '/' + track_id + '.xml'
         if os.path.exists(path):
             rmbid_parsing= converter.parse(path)
@@ -80,11 +81,11 @@ def get_folded_score_histogram(tracks):
                         else:
                             print(str(myNote) + " discarded")
                             # print(rmbid)
-
+            
             hist_y = [0] * len(LIST_NOTES)
             for i in range(len(LIST_NOTES)):
                 hist_y[i] = hist[LIST_NOTES[i]]
-
+            
     return hist_y
 
 
@@ -178,12 +179,18 @@ def print_performance(actual, predicted, overall_acc=None):
         Confusion matrix.
     """
 
-    print(f"Precision: {precision_score(actual, predicted, average='micro'):4f}")
+    print(f"Precision Micro: {precision_score(actual, predicted, average='micro'):4f}", flush=True)
+    print(f"Precision Macro: {precision_score(actual, predicted, average='macro'):4f}", flush=True)
+    print(f"Precision Weighted: {precision_score(actual, predicted, average='weighted'):4f}", flush=True)
     if overall_acc is not None:
         print(f"Std. Deviation: {np.std(overall_acc, ddof=1):.4f}")
-    print(f"Weighted recall for each class: {recall_score(actual, predicted, average='macro'):4f}")
-    print(f"Global recall: {recall_score(actual, predicted, average='micro'):4f}")
-    print(f"F1 score: {f1_score(actual, predicted, average='micro'):4f}")
+    print(f"Recall Macro: {recall_score(actual, predicted, average='macro'):4f}", flush=True)
+    print(f"Recall Micro: {recall_score(actual, predicted, average='micro'):4f}", flush=True)
+    print(f"Recall Weighted: {recall_score(actual, predicted, average='weighted'):4f}", flush=True)
+    print(f"F1 score Weighted: {f1_score(actual, predicted, average='weighted'):4f}", flush=True)
+    print(f"F1 score Macro: {f1_score(actual, predicted, average='macro'):4f}", flush=True)
+
+    print(f"F1 score Micro: {f1_score(actual, predicted, average='micro'):4f}", flush=True)
 
     cm = confusion_matrix(actual, predicted, labels = list(set(actual)))
     disp = ConfusionMatrixDisplay(cm, display_labels= list(set(actual)))
@@ -401,7 +408,7 @@ def label_length(df_notes):
         df_notes: Dataframe of note you want to add the length of the section
     -------------------------------------------------------------------
 
-    Computes the lenght of the section given the first and last timestamp of the section and add the new column
+    Computes the lenght of the section given the first and last timestamp of the section and adds the new column
     """
     if 'length_section' in df_notes.columns:
         df_notes.drop('length_section', axis=1, inplace=True)

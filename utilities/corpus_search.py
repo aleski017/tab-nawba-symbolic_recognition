@@ -15,6 +15,18 @@ def load_pd(pd_path):
     return vals, bins
 
 
+def get_id_track_by_label(label, label_id):
+    with open(DF_PATH + "andalusian_description.json") as file:
+        data = (json.load(file))
+    track_list = []
+    for entry in data:
+        mbid = entry.get('mbid')
+        for section in entry.get('sections', []):
+            if section[label]['id'] == label_id:
+                track_list.append(mbid)
+                break
+    return track_list
+
 def get_id_track_by_nawba(nawba_id = None):
     with open(DF_PATH + "andalusian_description.json") as file:
         data = (json.load(file))
