@@ -10,7 +10,7 @@ from utilities.model_matching_computation import print_performance
 from utilities.constants import DF_PATH_TRACKS
 import partitura
 import numpy as np
-import os 
+import os
 from utilities.corpus_search import *
 from sklearn.preprocessing import LabelEncoder
 import graphmuse as gm
@@ -28,12 +28,12 @@ class NoteSequenceDataset(Dataset):
 
     def __getitem__(self, idx):
         # Returns the lists into a converted torch for RNN usage
-        sequence = torch.tensor(self.sequences[idx], dtype=torch.float32)  
-        global_feat = torch.tensor(self.global_features[idx], dtype=torch.float32)  
-        label = torch.tensor(self.labels[idx], dtype=torch.long)  
+        sequence = torch.tensor(self.sequences[idx], dtype=torch.float32)
+        global_feat = torch.tensor(self.global_features[idx], dtype=torch.float32)
+        label = torch.tensor(self.labels[idx], dtype=torch.long)
 
         return sequence, global_feat, label
-    
+
 def check_accuracy(loader, model, print_predictions = False):
     model.eval()
     total = 0
@@ -45,14 +45,14 @@ def check_accuracy(loader, model, print_predictions = False):
             #data, targets = batch
             output = model(sequences, global_feats[:, -1].long(), global_feats[:, :-1])
             _, predicted = torch.max(output.data, 1)
-            
+
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
             if print_predictions:
                 print(f"Predictions: {predicted.tolist()}")
                 print(f"Actual: {labels.tolist()}")
-            pred.extend(predicted.tolist())                                                                                                                                                       
-            actual.extend(labels.tolist())                                                                                                                                                       
+            pred.extend(predicted.tolist())
+            actual.extend(labels.tolist())
 
     accuracy = float(correct) / float(total) * 100
     print(f'Got {correct} / {total} correct with accuracy {accuracy:.2f}', flush=True)
@@ -69,7 +69,7 @@ class CNN(nn.Module):
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.MaxPool1d(kernel_size=2),
-            
+
             nn.Conv1d(in_channels=64, out_channels=128, kernel_size=5, padding=1),
             nn.BatchNorm1d(128),
             nn.ReLU(),
@@ -80,34 +80,30 @@ class CNN(nn.Module):
             nn.BatchNorm1d(256),
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.AdaptiveMaxPool1d(1)  
-            
+            nn.AdaptiveMaxPool1d(1)
+
         )
-        
+
         self.key_embedding = nn.Embedding(num_keys, key_embed_dim)
-        
+
         self.global_fc = nn.Sequential(
             nn.Linear(global_feat_dim, global_out_dim),
-            
+
             nn.ReLU(),
             nn.Dropout(0.3)
         )
-        
+
         self.classifier = nn.Sequential(
             nn.Linear(256 + key_embed_dim + global_out_dim, 128),
-            nn.BatchNorm1d(128),
-            #nn.Linear(128 , 128),
             nn.ReLU(),
             nn.Dropout(0.3),
-            # try adding another layer
             nn.Linear(128, num_classes)
         )
-
     def forward(self, x, key, global_feats):
-        
-        x = x.permute(0, 2, 1)  
-        x = self.conv(x)        
-        x = x.view(x.size(0), -1)  
+
+        x = x.permute(0, 2, 1)
+        x = self.conv(x)
+        x = x.view(x.size(0), -1)
 
         key_vec = self.key_embedding(key)
         global_vec = self.global_fc(global_feats)
@@ -115,7 +111,7 @@ class CNN(nn.Module):
         combined = torch.cat([x, key_vec, global_vec], dim=1)
         out = self.classifier(combined)
         return out
-    
+
 class RNN(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes,
                     num_keys, key_embed_dim, global_feat_dim, global_out_dim, dropout= 0.3):
@@ -128,11 +124,15 @@ class RNN(nn.Module):
             nn.Dropout(dropout)
         )
         self.classifier = nn.Sequential(
-            nn.Linear(hidden_size + key_embed_dim + global_out_dim, 64),
-            
+            nn.Linear(hidden_size + key_embed_dim + global_out_dim, 256),
+            nn.ReLU(),
+            nn.LayerNorm(256),
+            nn.Dropout(dropout),
+            nn.Linear(256, 128),              # added intermediate layer
+
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(64, num_classes)
+            nn.Linear(128, num_classes)
         )
 
     def forward(self, x, key, global_feats):
@@ -334,31 +334,34 @@ class MetricalGNN(nn.Module):
             nn.ReLU(),
             nn.Dropout(dropout)
         )
-        
+
         self.key_embedding = nn.Embedding(num_keys, key_embed_dim)
 
         self.mlp = nn.Sequential(
-            nn.Linear(hidden_dim + global_out_dim + key_embed_dim, hidden_dim),
-            #nn.Linear(hidden_dim, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
+            nn.Linear(hidden_dim + global_out_dim + key_embed_dim, 256),
+            nn.ReLU(),
+            nn.BatchNorm1d(256),
+            nn.Dropout(dropout),
+            nn.Linear(256, 128),              # added intermediate layer
+
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim, output_dim)
+            nn.Linear(128, output_dim)
         )
 
-    
+
     def forward(self, x_dict, edge_index_dict, batch, key, global_feats, neighbor_mask_node=None, neighbor_mask_edge=None):
         x_dict = self.gnn(x_dict, edge_index_dict, neighbor_mask_node, neighbor_mask_edge)
-        note = x_dict["note"]  
-        
+        note = x_dict["note"]
+
         key_vec = self.key_embedding(key)
         global_vec = self.global_fc(global_feats)
-        pooled = self.att_pool(note, batch)  
-        
+        pooled = self.att_pool(note, batch)
+
         combined = torch.cat([pooled, global_vec, key_vec], dim=1)
-        out = self.mlp(combined)  
+        out = self.mlp(combined)
         return out
-    
+
 def to_device_batch(batch, device):
     # Moves all batch tensors to the specified device
     for node_type in batch.node_types:
@@ -372,19 +375,34 @@ def to_device_batch(batch, device):
 def extract_edge_index_dict(batch):
     return {edge_type: batch[edge_type].edge_index for edge_type in batch.edge_types}
 
-def evaluate(model, loader, criterion, device, print_results=False):
+def evaluate(model, loader, criterion, device, print_results=True):
     model.eval()
     total_loss, correct, total = 0.0, 0, 0
     actual = []
     prediction = []
+    accuracy_list = []
     with torch.no_grad():
         for batch in loader:
             batch = to_device_batch(batch, device)
             x_dict = {'note': batch['note'].x}
             edge_index_dict = extract_edge_index_dict(batch)
-            
-            out = model(x_dict, edge_index_dict, batch['note'].batch, batch['note'].primitive_global_features[:, 0].long(), batch['note'].derived_global_features[:, :-1])
-            loss = criterion(out, batch.y)
+
+            key_tensor = batch['note'].primitive_global_features[:, 0].long().to(device)
+            derived_features = batch['note'].derived_global_features[:, :-1].to(device)
+            batch_tensor = batch['note'].batch.to(device)
+            target = batch.y.to(device)
+
+# Forward pass
+            out = model(x_dict, edge_index_dict, batch_tensor, key_tensor, derived_features)
+
+            loss = criterion(out, target)
+
+
+
+
+
+
+
             total_loss += loss.item()
             pred = out.argmax(dim=1)
             prediction.extend(pred.cpu().numpy())
@@ -392,15 +410,16 @@ def evaluate(model, loader, criterion, device, print_results=False):
 
             correct += (pred == batch.y).sum().item()
             total += batch.y.size(0)
+            accuracy_list.append(correct / total)
     avg_loss = total_loss / len(loader)
     accuracy = correct / total
     if print_results:
-        print(f"\n {'-' * 50}") 
-        print_performance(actual, prediction)
+        print(f"\n {'-' * 50}")
+        print_performance(actual, prediction, accuracy_list)
     return avg_loss, accuracy
 
 def save_graphs():
-       
+
     le = LabelEncoder()
     df_notes = pd.read_json('note_corpus3.json', orient ='split', compression = 'infer')
     keys_to_encode = df_notes['key'].apply(lambda x: str(x)).tolist()
@@ -412,10 +431,10 @@ def save_graphs():
     for track in get_all_id_tracks():
 
         path = DF_PATH_TRACKS + track + '/' + track + '.xml'
-        
+
         if not os.path.exists(path): continue
-        
-        
+
+
         score = partitura.load_musicxml(DF_PATH_TRACKS + track + '/' + track + '.xml')
         tracks_ids.append(track)
 
@@ -426,31 +445,31 @@ def save_graphs():
 
         bpm = df_notes[df_notes["section_id"].str.contains(track, na=False)]['bpm'].mean()
         key = df_notes[df_notes["section_id"].str.contains(track, na=False)]['key'].mode()[0]
-        
+
         letter_notes = []
         for note in note_array:
-        
-            onset_beat = note['onset_beat']       
-            duration_beat = note['duration_beat']    
-            onset_quarter = note['onset_quarter'] #to maybe delete  
-            duration_quarter = note['duration_quarter'] #to maybe delete    
-            onset_div = note['onset_div'] #to maybe delete     
-            duration_div = note['duration_div'] #to maybe delete    
-            pitch = note['pitch']    
+
+            onset_beat = note['onset_beat']
+            duration_beat = note['duration_beat']
+            onset_quarter = note['onset_quarter'] #to maybe delete
+            duration_quarter = note['duration_quarter'] #to maybe delete
+            onset_div = note['onset_div'] #to maybe delete
+            duration_div = note['duration_div'] #to maybe delete
+            pitch = note['pitch']
             voice = note['voice'] #to maybe delete
             alter_string =  '-'*abs(note['alter'])if note['alter'] <= -1 else str('#'*abs(note['alter']))
             step = note['step'] + alter_string
             letter_notes.append(step)
             #print(step)
             is_downbeat = note['is_downbeat']
-        
-        
+
+
 
             feature_list.append([onset_beat,duration_beat,onset_quarter,duration_quarter,onset_div,duration_div,pitch,voice,is_downbeat])
         feature_list = np.array(feature_list)
         #pitch_distr = list(compute_avg_folded_hist_labeled_notes(letter_notes, feature_list[:, 3]))
         #ql_distr = get_folded_rhythm_histogram(feature_list[:, 3])
-        all_note_features.append(feature_list)   
+        all_note_features.append(feature_list)
         #all_global_features.append(extract_feature_graph(feature_list, key, bpm, pitch_distr, ql_distr))
         all_global_features.append([key, bpm])
 
@@ -466,7 +485,7 @@ def save_graphs():
             l_value = df_notes[df_notes["section_id"].str.contains(track_id, na=False)][l].iloc[0]
             score_graph['note'][f'y_{l}'] = torch.tensor([l_value], dtype=torch.long)
             score_graph['note']['primitive_global_features'] = global_feat.unsqueeze(0)
-        
+
         torch.save(score_graph, f'graphs/{track_id}.pt')
 
 def extract_feature_graph(sequence, key, bpm, pitch_distr, ql_distr=None):
@@ -479,44 +498,44 @@ def extract_feature_graph(sequence, key, bpm, pitch_distr, ql_distr=None):
 
     Extracts derivated global features from sequence and returns a dictionary
     """
-    
+
     def compute_entropy(sequence):
         pitches = [note[0] for note in sequence]
         pitch_counts = np.bincount([p for p in pitches if p >= 0])  # remove rests (-1)
         pitch_prob = pitch_counts / np.sum(pitch_counts)
-        
+
         return stats.entropy(pitch_prob)
 
     def compute_entropy_duration(sequence):
         durations = [note[1] for note in sequence]
         duration_counts = np.bincount([p for p in durations if p >=0])  # remove rests (-1)
         duration_prob = duration_counts / np.sum(duration_counts)
-        
+
         return stats.entropy(duration_prob)
 
     onsets = [note[0] for note in sequence]
     pitches = [note[6] for note in sequence]
     durations = [note[1] for note in sequence]
-  
-    
-    
+
+
+
     beatStrengths = [note[8] for note in sequence]
     length_section = len(pitches)
     intervals = [pitches[i+1] - pitches[i] for i in range(len(pitches) -1)]
     num_ascending_intervals = len([interval for interval in intervals if interval > 0])
- 
+
     key_value = key
     bpm = bpm
     duration_ngrams = [tuple(durations[i:i+3]) for i in range(len(durations)-2)]
     sum_pitch_changes = sum([1 if (pitches[i] < pitches[i+1] and pitches[i+1] > pitches[i+2]) or
                         (pitches[i] > pitches[i+1] and pitches[i+1] < pitches[i+2])  else 0 for i in range(len(pitches) -2)])
-    
+
     sum_duration_changes = sum([1 if (pitches[i] < pitches[i+1] and pitches[i+1] > pitches[i+2]) or
                         (pitches[i] > pitches[i+1] and pitches[i+1] < pitches[i+2])  else 0 for i in range(len(pitches) -2)])
     number_distinct_melodic_intervals = len(np.unique(np.array(intervals)))
     counter = Counter(intervals)
 
-    
+
     fixed_intervals = list(range(-11, 12))  # from -11 to 11 inclusive
 
     # Step 3: Build the fixed-size array
@@ -550,7 +569,10 @@ def extract_feature_graph(sequence, key, bpm, pitch_distr, ql_distr=None):
     "duration_entropy" : compute_entropy_duration(sequence),
     "key": key_value,
     }
- 
+
+
+
+
 
 
 

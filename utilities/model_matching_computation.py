@@ -8,6 +8,7 @@ from sklearn.metrics import recall_score, precision_score, f1_score
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import re
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold
 
 
 
@@ -48,7 +49,7 @@ def convert_folded_scores_in_models(y_list, std):
     return x_distribution, y_distribution_list
 
 
-def get_folded_score_histogram(tracks):
+def get_folded_score_histogram(tracks, print_discarded_chords = False):
 
     """
     Parameters
@@ -69,7 +70,8 @@ def get_folded_score_histogram(tracks):
             for myNote in rmbid_stream:
                 
                 if myNote.isChord:
-                    print(str(myNote) + " discarded")
+                    if print_discarded_chords:
+                        print(str(myNote) + " discarded")
                 else:
                     if myNote.name in LIST_NOTES:
                         hist[myNote.name] = hist[myNote.name] + myNote.duration.quarterLength
@@ -79,7 +81,8 @@ def get_folded_score_histogram(tracks):
                             name_translated = PAIR_NOTES[i - 1]
                             hist[name_translated] = hist[name_translated] + myNote.duration.quarterLength
                         else:
-                            print(str(myNote) + " discarded")
+                            if print_discarded_chords:
+                                print(str(myNote) + " discarded")
                             # print(rmbid)
             
             hist_y = [0] * len(LIST_NOTES)
@@ -294,69 +297,62 @@ def skf_model_matching_label(df, df_notes, std, split, label):
     return actual, predicted, overall_acc
 
 
-def skf_model_matching(label, df, random_state, k, test_dim, std):
+def skf_model_matching(label, df, random_state, k, std):
     """
     Parameters:
-        df: dataframe with track id and target label
-        std: standard deviation value to compute gaussina smoothening with
-        label: target label to perform the experiment on
-        test_dim: Number of samples to take in the test set
+        df: dataframe with 'track_id' and target label
+        std: standard deviation for Gaussian smoothing
+        label: label column name in the dataframe
+        k: number of folds for cross-validation
     -------------------------------------------------------------------
-
-    Perfoms the model matching experiment by gathering tracks and computing the model of each label.
-    Computes histogram into models and then compares it to each comprehensive target label model.
+    Performs model matching experiment with proper Stratified K-Fold.
     """
-    # PREPARE DATASET FOR TRAINING
-    X = df.filter(['track_id', label])
-    y = df.filter([label])
 
-    overall_acc= []
+    X = df[['track_id', label]]
+    y = df[label]
+
+    overall_acc = []
     actual = []
     predicted = []
-    y_model_list = []
-    # Stratified K-Fold Cross-Validation LOOP
-    for fold in range(k):        
-        test_indices = []
-        train_indices = []
 
-        for label_t in y[label].unique():
-            label_indices = y[y[label] == label_t].index.to_list()
-        
-            # SET REPRODUCIBLE SEED FOR SHUFFLE
-            np.random.seed(fold * random_state)  
-            np.random.shuffle(label_indices)
+    skf = StratifiedKFold(n_splits=k, shuffle=True, random_state=random_state)
 
-            test_indices.extend(label_indices[:test_dim])  
-            train_indices.extend(label_indices[test_dim:])  
-            
+    for fold, (train_index, test_index) in enumerate(skf.split(X, y)):
+        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
-        X_train, X_test = X.loc[train_indices], X.loc[test_indices]
-        _, y_test = y.loc[train_indices], y.loc[test_indices]
-        
-        # CREATE TEMPLATES FOR EACH LABEL
+        # CREATE TEMPLATES FOR EACH LABEL FROM TRAINING DATA
         y_model_list = []
-        for label_t2 in LABEL_LIST_TRAIN[label]:
-            _, y_temp = compute_avg_folded_hist_scores(X_train.loc[X_train[label] == label_t2, 'track_id'].tolist())        
+        for label_t in LABEL_LIST_TRAIN[label]:
+            train_tracks = X_train[X_train[label] == label_t]['track_id'].tolist()
+            _, y_temp = compute_avg_folded_hist_scores(train_tracks)
             _, y_model = convert_folded_scores_in_models([y_temp], std)
             y_model_list.append(y_model[0])
 
-        # COMPUTE MODEL OF TEST SAMPLES
+        # EVALUATE ON TEST DATA
         curr_acc = []
         for i in range(len(X_test)):
-            _, y_temp = compute_avg_folded_hist_scores([X_test.iloc[i]['track_id']])
-            _, y_model_list_test = convert_folded_scores_in_models([y_temp], std)
+            track_id = X_test.iloc[i]['track_id']
+            _, y_temp = compute_avg_folded_hist_scores([track_id])
+            _, y_model_test = convert_folded_scores_in_models([y_temp], std)
 
-            # RUN ACCURACY TEST
-            label_score = []
-            for l, label_t3 in enumerate(LABEL_LIST_TRAIN[label]):
-                label_score.append((get_distance(y_model_list_test[0], y_model_list[l], 'L2'), label_t3))
-            
-            curr_acc.append(y_test.iloc[i][label] == min(label_score)[1])
-            actual.append(y_test.iloc[i][label])
-            predicted.append(min(label_score)[1])
-        overall_acc.append(sum(curr_acc) / len(curr_acc))
-        
-    return actual, predicted, overall_acc  
+            # Compute distance to each label model
+            label_scores = [
+                (get_distance(y_model_test[0], model, 'L2'), label_name)
+                for model, label_name in zip(y_model_list, LABEL_LIST_TRAIN[label])
+            ]
+            predicted_label = min(label_scores)[1]
+            true_label = y_test.iloc[i]
+
+            curr_acc.append(true_label == predicted_label)
+            actual.append(true_label)
+            predicted.append(predicted_label)
+
+        overall_acc.append(np.mean(curr_acc))
+
+    return actual, predicted, overall_acc
+
+
 
 def compute_avg_folded_hist_labeled_notes_models(nr, ql, std):
     """
