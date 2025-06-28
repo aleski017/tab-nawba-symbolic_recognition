@@ -1,2 +1,7 @@
 *.mp3
 *.pyc
+note_corpus.json
+note_corpus2.json
+note_corpus4.json
+section_matching.ipynb
+temporal_matching.ipynb

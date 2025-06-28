@@ -314,7 +314,8 @@ def skf_model_matching(label, df, random_state, k, std):
     overall_acc = []
     actual = []
     predicted = []
-
+    f1_w = []
+    rec_w = []
     skf = StratifiedKFold(n_splits=k, shuffle=True, random_state=random_state)
 
     for fold, (train_index, test_index) in enumerate(skf.split(X, y)):
@@ -331,6 +332,8 @@ def skf_model_matching(label, df, random_state, k, std):
 
         # EVALUATE ON TEST DATA
         curr_acc = []
+        curr_act = []
+        curr_pred = []
         for i in range(len(X_test)):
             track_id = X_test.iloc[i]['track_id']
             _, y_temp = compute_avg_folded_hist_scores([track_id])
@@ -347,9 +350,12 @@ def skf_model_matching(label, df, random_state, k, std):
             curr_acc.append(true_label == predicted_label)
             actual.append(true_label)
             predicted.append(predicted_label)
-
+        f1_w.append(f1_score(curr_act, curr_pred, average="weighted"))
+        rec_w.append(f1_score(curr_act, curr_pred, average="weighted"))
         overall_acc.append(np.mean(curr_acc))
 
+    print(np.array(rec_w).std())
+    print(np.array(f1_w).std())
     return actual, predicted, overall_acc
 
 
