@@ -17,9 +17,8 @@ for experiment reproduction and further research.
 
 
 
-1. [Packages installation](#installation)  
+1. [Libraries Installation](#installation)  
 2. [Notebooks Overview](#usage)  
-3. [Project Structure](#project-structure) 
 4. [Replicating Experiments](#replicating-experiments)  
 5. [Citations](#citations)
 
@@ -58,6 +57,46 @@ methods which identify nawba and ṭāb‘
 git https://github.com/aleski017/tab-nawba-symbolic_recognition.git
 cd tab-nawba-symbolic_recognition
 
-# Create a virtual environment (optional but recommended)
-conda env create --name ENV-NAME --file environment.yml
+# Create a virtual environment 
+conda env create -f environment.yml
+
+# Activate the environment
+conda activate pyg-env
+```
+
+## Notebooks Overview
+
+```
+project-root/
+│
+├── corpus-dataset/                # Core corpus data and metadata
+│   ├── documents/                 # Track-wise data
+│   ├── andalusian_description.json
+│   ├── andalusian_form.json
+│   ├── andalusian_mizan.json
+│   ├── andalusian_nawba.json
+│   ├── andalusian_recording.json
+│   └── andalusian_tab.json
+│
+├── experiments/                   
+│   ├── run_experiments.py         # Main Experiment Scripts
+│   ├── graphs/                    # Graph-converted XML Scores
+│   └── utilities/                 # Helper Functions
+│       ├── constants.py
+│       ├── corpus_search.py       
+│       ├── dl_utilities.py        # Deep Learning Architectures
+│       ├── features_eng.py
+│       ├── model_matching.py
+│       └── temporal_analysis.py
+│
+├── note_corpus3.json
+│
+├── graph_findings.ipynb           # Notebook for graph exploration
+├── overview_data.ipynb            # Data overview and inspection
+├── run_experiments.ipynb          # Interactive version of experiment runner
+├── section_matching.ipynb         # Notebook for section-level analysis
+│
+├── environment.yml                # Conda environment dependencies
+└── README.md
+```
 
