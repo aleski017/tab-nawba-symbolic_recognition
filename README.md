@@ -18,15 +18,17 @@ for experiment reproduction and further research.
 
 
 1. [Libraries Installation](#installation)  
-2. [Notebooks Overview](#usage)  
-4. [Replicating Experiments](#replicating-experiments)  
-5. [Citations](#citations)
+2. [Project Structure](#structure)  
+3. [Citations](#citations)
+4. [Corpus Analysis](overview_data.ipynb)
+5. [Replicate Experiments](run_experiments.ipynb)
+
 
 ---
 
 ## Overview
 
-Our results show that
+Building upon [[1]](#1), our results show that
 data-driven Machine Learning approaches provide a significant improve-
 ment for the aforementioned classification tasks compared to model-
 based Artificial Intelligence. Moreover, we introduce a method based
@@ -34,7 +36,7 @@ on a Graph Convolutional Neural Network (GNN) architecture that ex-
 ploits the relationships between music components. To the best of our
 knowledge, this is the first application of a GNN to Non-Western MIR.
 This work has the potential to set a new baseline for state-of-the-art
-methods which identify nawba and ṭāb‘
+methods which identify nawba and ṭāb‘.
 
 ---
 
@@ -47,6 +49,35 @@ methods which identify nawba and ṭāb‘
 - **Alessandro Sellani** 
 - **Ivan Donadello** 
 - **Niccolo' Pretto** 
+
+---
+
+## Notebooks Overview
+There are two main Jupyter notebooks. In [overview_data](overview_data.ipynb) the user can explore the Arab-Andalusian corpus by statistical analysis and class-balance investigation along with the (nawba, tab) relationship.
+While [run_experiments](run_experiments.ipynb) allows the user to replicate the experiments to achieve the results listed in the paper
+
+```
+project-root/
+│
+├── corpus-dataset/                # Core corpus track-wise and meta data
+├── experiments/                   
+│   ├── run_experiments.py         # Main Experiment Scripts
+│   ├── graphs/                    # Graph-converted XML Scores
+│   └── utilities/                 # Helper Functions
+│       ├── constants.py
+│       ├── corpus_search.py       
+│       ├── dl_utilities.py        # Deep Learning Architectures
+│       ├── features_eng.py
+│       ├── model_matching.py
+│       └── temporal_analysis.py
+│
+├── note_corpus3.json
+│
+├── overview_data.ipynb            # Data analysis and corpus statistics
+├── run_experiments.ipynb          # Experiments for all models
+│
+├── environment.yml                # Environment dependencies
+```
 
 ---
 
@@ -63,40 +94,12 @@ conda env create -f environment.yml
 # Activate the environment
 conda activate pyg-env
 ```
+---
+<a id="1">[1]</a> 
+Pretto, N., Bozkurt, B., Caro Repetto, R., Serra, X.: Nawba recognition for
+Arab-Andalusian music using templates from music scores. In: Proceedings of the
+15th Sound and Music Computing Conference, SMC 2018. p. 394 – 399. Limassol,
+Cyprus (2018). https://doi.org/10.5281/zenodo.1257388
 
-## Notebooks Overview
 
-```
-project-root/
-│
-├── corpus-dataset/                # Core corpus data and metadata
-│   ├── documents/                 # Track-wise data
-│   ├── andalusian_description.json
-│   ├── andalusian_form.json
-│   ├── andalusian_mizan.json
-│   ├── andalusian_nawba.json
-│   ├── andalusian_recording.json
-│   └── andalusian_tab.json
-│
-├── experiments/                   
-│   ├── run_experiments.py         # Main Experiment Scripts
-│   ├── graphs/                    # Graph-converted XML Scores
-│   └── utilities/                 # Helper Functions
-│       ├── constants.py
-│       ├── corpus_search.py       
-│       ├── dl_utilities.py        # Deep Learning Architectures
-│       ├── features_eng.py
-│       ├── model_matching.py
-│       └── temporal_analysis.py
-│
-├── note_corpus3.json
-│
-├── graph_findings.ipynb           # Notebook for graph exploration
-├── overview_data.ipynb            # Data overview and inspection
-├── run_experiments.ipynb          # Interactive version of experiment runner
-├── section_matching.ipynb         # Notebook for section-level analysis
-│
-├── environment.yml                # Conda environment dependencies
-└── README.md
-```
 

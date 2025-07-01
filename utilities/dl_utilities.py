@@ -34,7 +34,7 @@ class NoteSequenceDataset(Dataset):
 
         return sequence, global_feat, label
 
-def check_accuracy(loader, model, print_predictions = False):
+def check_accuracy(loader, model, verbose = False):
     model.eval()
     total = 0
     correct = 0
@@ -48,14 +48,15 @@ def check_accuracy(loader, model, print_predictions = False):
 
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
-            if print_predictions:
+            if verbose:
                 print(f"Predictions: {predicted.tolist()}")
                 print(f"Actual: {labels.tolist()}")
             pred.extend(predicted.tolist())
             actual.extend(labels.tolist())
 
     accuracy = float(correct) / float(total) * 100
-    print(f'Got {correct} / {total} correct with accuracy {accuracy:.2f}', flush=True)
+    if verbose:
+        print(f'Got {correct} / {total} correct with accuracy {accuracy:.2f}', flush=True)
     model.train()
     return actual, pred, accuracy
 
@@ -375,7 +376,7 @@ def to_device_batch(batch, device):
 def extract_edge_index_dict(batch):
     return {edge_type: batch[edge_type].edge_index for edge_type in batch.edge_types}
 
-def evaluate(model, loader, criterion, device, print_results=True):
+def evaluate(model, loader, criterion, device, verbose=True):
     model.eval()
     total_loss, correct, total = 0.0, 0, 0
     actual = []
@@ -391,17 +392,9 @@ def evaluate(model, loader, criterion, device, print_results=True):
             derived_features = batch['note'].derived_global_features[:, :-1].to(device)
             batch_tensor = batch['note'].batch.to(device)
             target = batch.y.to(device)
-
-# Forward pass
+        # Forward pass
             out = model(x_dict, edge_index_dict, batch_tensor, key_tensor, derived_features)
-
             loss = criterion(out, target)
-
-
-
-
-
-
 
             total_loss += loss.item()
             pred = out.argmax(dim=1)
@@ -413,10 +406,10 @@ def evaluate(model, loader, criterion, device, print_results=True):
             accuracy_list.append(correct / total)
     avg_loss = total_loss / len(loader)
     accuracy = correct / total
-    if print_results:
+    if verbose:
         print(f"\n {'-' * 50}")
         print_performance(actual, prediction, accuracy_list)
-    return avg_loss, accuracy
+    return actual, prediction, accuracy, avg_loss
 
 def save_graphs():
 

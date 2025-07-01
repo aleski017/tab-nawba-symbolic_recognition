@@ -83,7 +83,7 @@ def run_ModelBasedAI_experiment(label):
     y_test, y_pred, overall_acc = skf_model_matching(label, df, random_state= 42, k= 10, std=30)
     print_performance(y_test, y_pred, overall_acc)
 
-def run_GaussianNB_experiment(label, overlap, sequence_length, random_state, folds = 10, print_results = True):
+def run_GaussianNB_experiment(label, overlap, sequence_length, random_state, folds = 10, verbose = True):
     print(f"For [{label}]: Stride {overlap}% || Length of {sequence_length} notes", flush=True)
     skf = StratifiedKFold(n_splits=folds)
     df, pitch_distr_sections, ql_distr_sections = prepare_dataframe(label, overlap, sequence_length)
@@ -130,11 +130,11 @@ def run_GaussianNB_experiment(label, overlap, sequence_length, random_state, fol
 
         # Check if it converged and the testing accuracy
         #print("testing accuracy:", clf.score(X_test, y_test), flush=True)
-    if print_results:
+    if verbose:
         print(f"\n {'-' * 20}", flush=True)
         print_performance(actual, pred , overall_acc)
 
-def run_SVC_experiment(label, overlap, sequence_length, random_state, folds = 10, print_results = True):
+def run_SVC_experiment(label, overlap, sequence_length, random_state, folds = 10, verbose = True):
 
     print(f"For [{label}]: Stride {overlap}% || Length of {sequence_length} notes", flush=True)
     random.seed(random_state)
@@ -187,13 +187,13 @@ def run_SVC_experiment(label, overlap, sequence_length, random_state, folds = 10
 
         # Check if it converged and the testing accuracy
         #print("testing accuracy:", clf.score(X_test, y_test), flush=True)
-    if print_results:
+    if verbose:
         print(f"\n {'-' * 20}", flush=True)
         print_performance(actual, pred , overall_acc)
         print("Recall_std ", np.array(rec_w).std())
         print("f1_std ", np.array(f1_w).std())
     return actual, pred, overall_acc
-def run_RandomForest_experiment(label, overlap, sequence_length, random_state, folds = 10, hyperparameter_tuning = False, print_results = True):
+def run_RandomForest_experiment(label, overlap, sequence_length, random_state, folds = 10, hyperparameter_tuning = False, verbose = True):
     best_params = None
     skf = StratifiedKFold(n_splits=folds)
     print(f"For [{label}]: Stride {overlap}% || Length of {sequence_length} notes", flush=True)
@@ -281,13 +281,13 @@ def run_RandomForest_experiment(label, overlap, sequence_length, random_state, f
 
         # Check if it converged and the testing accuracy
         #print("testing accuracy:", clf.score(X_test, y_test), flush=True)
-    if print_results:
+    if verbose:
         print(f"\n {'-' * 20}", flush=True)
         print_performance(actual, pred , overall_acc)
         print("Recall_std ", np.array(rec_w).std())
         print("f1_std ", np.array(f1_w).std())
     return actual, pred, overall_acc
-def run_KNN_experiment(label, overlap, sequence_length, random_state, folds = 10, print_results = True):
+def run_KNN_experiment(label, overlap, sequence_length, random_state, folds = 10, verbose = True):
     print(f"For [{label}]: Stride {overlap}% || Length of {sequence_length} notes", flush=True)
     skf = StratifiedKFold(n_splits=folds)
     df, pitch_distr_sections, ql_distr_sections = prepare_dataframe(label, overlap, sequence_length)
@@ -342,14 +342,14 @@ def run_KNN_experiment(label, overlap, sequence_length, random_state, folds = 10
 
         # Check if it converged and the testing accuracy
         #print("testing accuracy:", clf.score(X_test, y_test), flush=True)
-    if print_results:
+    if verbose:
         print(f"\n {'-' * 20}", flush=True)
         print_performance(actual, pred , overall_acc)
         print("Recall_std ", np.array(rec_w).std())
         print("f1_std ", np.array(f1_w).std())
     return actual, pred, overall_acc
 
-def run_1DCNN_experiment(label, overlap, sequence_length, random_state, batch_size, folds = 10, print_results = True):
+def run_1DCNN_experiment(label, overlap, sequence_length, random_state, batch_size, folds = 10, verbose = True):
     device = torch.device('cpu')
     print(f"For [{label}]: Stride {overlap}% || Length of {sequence_length} notes, {batch_size}", flush=True)
     df, pitch_distr_sections, ql_distr_sections = prepare_dataframe(label, overlap, sequence_length)
@@ -380,10 +380,10 @@ def run_1DCNN_experiment(label, overlap, sequence_length, random_state, batch_si
     overall_acc = []
     plt_val_loss = []
     plt_train_loss = []
-    print(f"Processing fold:", end="" , flush=True)
+    print(f"Processing fold ", end="" , flush=True)
     for fold in range(folds):
         patience = 10
-        print(f"Fold {fold}:", flush=True)
+        print(f"{fold}:", end =", ", flush=True)
         #train_prefixes, test_prefixes = train_test_split(prefixes, stratify=prefixes_y, test_size=0.2, random_state=random_state)
         train_prefixes_temp, test_prefixes, train_prefixes_y_temp, test_prefixes_y = train_test_split(prefixes, prefixes_y, stratify=prefixes_y, test_size=0.1, random_state=random_state * fold)
         train_prefixes, val_prefixes, train_prefixes_y, val_prefixes_y = train_test_split(train_prefixes_temp, train_prefixes_y_temp, stratify=train_prefixes_y_temp, test_size=0.11, random_state=random_state * fold)
@@ -517,7 +517,7 @@ def run_1DCNN_experiment(label, overlap, sequence_length, random_state, batch_si
             #print(f"Epoch {epoch}: Val Loss = {avg_val_loss:.4f}, Best Val Loss = {best_loss:.4f}, Val Acc = {val_acc:.4f}, Patience = {patience:.4f},", flush=True)
             scheduler.step()
 
-        print(f"Finished at epoch {epoch}", flush=True)
+        #print(f"Finished at epoch {epoch}", flush=True)
         model.load_state_dict(best_model)
         y_pred, y_actual, y_accuracy = (check_accuracy(test_loader, model))
         pred.extend(y_pred)
@@ -525,15 +525,15 @@ def run_1DCNN_experiment(label, overlap, sequence_length, random_state, batch_si
         overall_acc.append(y_accuracy)
         rec_w.append(recall_score(y_actual, y_pred, average='weighted'))
         f1_w.append(f1_score(y_actual, y_pred, average='weighted'))
-    if print_results:
+    if verbose:
         print(f"\n {'-' * 20}", flush=True)
-        print_performance(actual, pred , overall_acc)
+        #print_performance(actual, pred , overall_acc)
         print("Recall_std ", np.array(rec_w).std())
         print("f1_std ", np.array(f1_w).std())
         print_performance(y_actual, y_pred , y_accuracy)
     return actual, pred, overall_acc
 
-def run_1DCNN_experiment_t(label, overlap, sequence_length, random_state, batch_size, folds = 10, print_results = True):
+def run_1DCNN_experiment_t(label, overlap, sequence_length, random_state, batch_size, folds = 10, verbose = True):
     device = torch.device('cpu')
     print(f"For [{label}]: Stride {overlap}% || Length of {sequence_length} notes, {batch_size}", flush=True)
     df, pitch_distr_sections, ql_distr_sections = prepare_dataframe(label, overlap, sequence_length)
@@ -704,7 +704,7 @@ def run_1DCNN_experiment_t(label, overlap, sequence_length, random_state, batch_
         overall_acc.append(y_accuracy)
         rec_w.append(recall_score(y_actual, y_pred, average='weighted'))
         f1_w.append(f1_score(y_actual, y_pred, average='weighted'))
-    if print_results:
+    if verbose:
         print(f"\n {'-' * 20}", flush=True)
         print_performance(actual, pred , overall_acc)
         print("Recall_std ", np.array(rec_w).std())
@@ -714,10 +714,10 @@ def run_1DCNN_experiment_t(label, overlap, sequence_length, random_state, batch_
 
 def run_GNN_experiment(label, subgraph_size, num_hidden_features, random_state,num_layers, dropout = 0.7, batch_size = 16, folds = 10):
     
-    
+    act, pred, accuracy = [], [], []
     num_epochs = 100
     num_input_features = 9
-    global_out_dim = 64
+    global_out_dim = 128
     num_output_features = len(LABEL_LIST_TRAIN[label])
     patience = 10
     metadata = (
@@ -733,7 +733,7 @@ def run_GNN_experiment(label, subgraph_size, num_hidden_features, random_state,n
     graphs, graphs_y = load_graphs_perLabel(label)
 
     for i in range(folds):
-        print(f"Loaded {len(graphs)} graphs",  flush=True)
+        #print(f"Loaded {len(graphs)} graphs",  flush=True)
         X_train, X_test, X_val, y_train, y_test, y_val= train_test_val_split(graphs, graphs_y, random_state * i)
 
 
@@ -762,9 +762,9 @@ def run_GNN_experiment(label, subgraph_size, num_hidden_features, random_state,n
         val_loader = MuseNeighborLoader(val_dataset, subgraph_size=subgraph_size, batch_size=batch_size,
                                         num_neighbors=[int(subgraph_size * 0.6), int(subgraph_size * 0.3), int(subgraph_size * 0.1)])
 
-        print(len(train_loader), flush=True)
-        print(len(test_loader), flush=True)
-        print(len(val_loader), flush=True)
+       # print(len(train_loader), flush=True)
+        #print(len(test_loader), flush=True)
+        #print(len(val_loader), flush=True)
         # Placeholders for global features
         train_globals = []
         val_globals = []
@@ -841,7 +841,7 @@ def run_GNN_experiment(label, subgraph_size, num_hidden_features, random_state,n
         train_losses, val_losses = [], []
 
         for epoch in range(num_epochs):
-            print(f"\nEpoch {epoch + 1}/{num_epochs}", flush=True)
+            #print(f"\nEpoch {epoch + 1}/{num_epochs}", flush=True)
             model.train()
             total_train_loss = 0.0
             for batch_idx, batch in enumerate(train_loader):
@@ -864,7 +864,7 @@ def run_GNN_experiment(label, subgraph_size, num_hidden_features, random_state,n
 
             scheduler.step()
             avg_train_loss = total_train_loss / len(train_loader)
-            val_loss, val_acc = evaluate(model, val_loader, criterion, device, print_results = False)
+            _, __, ___, val_loss = evaluate(model, val_loader, criterion, device, verbose = False)
             #print(f"\nTrain Loss: {avg_train_loss:.4f} | Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.4f}", flush=True)
             train_losses.append(avg_train_loss)
             val_losses.append(val_loss)
@@ -888,11 +888,16 @@ def run_GNN_experiment(label, subgraph_size, num_hidden_features, random_state,n
         torch.save(model.state_dict(), 'best_metrical_gnn.pt')
 
 
-        test_loss, test_accuracy = evaluate(model, test_loader, criterion, device, print_results=False)
-        return test_accuracy
+        a, p, acc, _ = evaluate(model, test_loader, criterion, device, verbose=False)
+        act.extend(a)
+        pred.extend(p)
+        accuracy.append(acc)
+        print(acc)
+    print_performance(act, pred, accuracy)
+    return act, pred, accuracy
     #print(f"Avg. loss of {test_loss:2f} || Accuracy of {test_accuracy:2f}", flush=True)
 
-def run_RNN_experiment(label, overlap, sequence_length, num_layers, hidden_size, random_state, batch_size = 16, folds = 10, print_results = True):
+def run_RNN_experiment(label, overlap, sequence_length, num_layers, hidden_size, random_state, batch_size = 16, folds = 10, verbose = True):
 
     actual = []
     pred = []
