@@ -1,15 +1,6 @@
 #  Melodic Pattern Analysis for Arab-Andalusian Music
 
-The majority of Music Information Retrieval (MIR) research
-is Western-centric, and the limited availability of annotated resources
-poses a challenge for data-intensive approaches. In this work, we imple-
-ment data-driven models and analyse their classification performance in
-two fundamental concepts in Arab-Andalusian music: nawba and ṭāb‘
-using symbolic encoding. To address data scarcity, we employ two data
-augmentation strategies: sliding window segmentation and graph sub-
-sampling. We process a dataset of Arab-Andalusian digital scores to
-extract meaningful symbolic features and provide the resulting dataset
-for experiment reproduction and further research.
+The majority of Music Information Retrieval (MIR) research is Western-centric, and the limited availability of annotated resources poses a challenge for data-intensive approaches. In this work, we implement data-driven models and analyse their classification performance in two fundamental concepts in Arab-Andalusian music: nawba and ṭāb‘ using symbolic encoding. To address data scarcity, we employ two data augmentation strategies: sliding window segmentation and graph sub-sampling. We process a dataset of Arab-Andalusian digital scores to extract meaningful symbolic features and provide the resulting dataset for experiment reproduction and further research.
 
 ---
 
@@ -28,15 +19,7 @@ for experiment reproduction and further research.
 
 ## Overview
 
-Building upon [[1]](#1), our results show that
-data-driven Machine Learning approaches provide a significant improve-
-ment for the aforementioned classification tasks compared to model-
-based Artificial Intelligence. Moreover, we introduce a method based
-on a Graph Convolutional Neural Network (GNN) architecture that ex-
-ploits the relationships between music components. To the best of our
-knowledge, this is the first application of a GNN to Non-Western MIR.
-This work has the potential to set a new baseline for state-of-the-art
-methods which identify nawba and ṭāb‘.
+Building upon [[1]](#1), our results show that data-driven Machine Learning approaches provide a significant improvement for the aforementioned classification tasks compared to model-based Artificial Intelligence. Moreover, we introduce a method based on a Graph Convolutional Neural Network (GNN) architecture that exploits the relationships between music components. To the best of our knowledge, this is the first application of a GNN to Non-Western MIR. This work has the potential to set a new baseline for state-of-the-art methods which identify nawba and ṭāb‘.
 
 ---
 
